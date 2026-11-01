@@ -82,38 +82,38 @@ export default function Faq() {
   }, [searchTerm, activeCategory]);
 
   return (
-    <div className="faq-page container py-4">
-      <header className="page-header mb-4 pb-3 border-bottom">
-        <h1 className="h2 mb-1">Preguntas Frecuentes</h1>
-        <p className="text-muted mb-0">
+    <div className="faq-page max-w-7xl mx-auto px-4 py-4">
+      <header className="page-header mb-4 pb-3 border-b border-slate-200">
+        <h1 className="text-2xl font-bold mb-1">Preguntas Frecuentes</h1>
+        <p className="text-slate-500 mb-0">
           Respuestas claras sobre la operativa de inventario, politicas de reposicion y compras
         </p>
       </header>
 
-      {/* Buscador de preguntas */}
-      <section className="card p-3 mb-4 shadow-sm">
-        <div className="row g-3 align-items-center">
-          <div className="col-12 col-md-7">
-            <label htmlFor="faqSearch" className="form-label small text-muted mb-1">
+      {/* Buscador de preguntas con filtro por categoria */}
+      <section className="bg-white border border-slate-200 rounded-lg p-3 mb-4 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          <div className="md:col-span-7">
+            <label htmlFor="faqSearch" className="block text-sm text-slate-500 mb-1">
               Buscar consulta o palabra clave:
             </label>
             <input
               type="text"
               id="faqSearch"
-              className="form-control"
+              className="form-input"
               placeholder="Ejemplo: stock critico, devolucion, pago, vencimiento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="col-12 col-md-5">
-            <label htmlFor="faqCategory" className="form-label small text-muted mb-1">
+          <div className="md:col-span-5">
+            <label htmlFor="faqCategory" className="block text-sm text-slate-500 mb-1">
               Filtrar por categoria:
             </label>
             <select
               id="faqCategory"
-              className="form-select"
+              className="form-input"
               value={activeCategory}
               onChange={(e) => setActiveCategory(e.target.value)}
             >
@@ -127,40 +127,45 @@ export default function Faq() {
         </div>
       </section>
 
-      {/* Acordeon de preguntas */}
+      {/* ----------------------------------------------------------------
+          Acordeon de preguntas frecuentes
+          Implementacion manual que reemplaza el accordion de Bootstrap.
+          Cada pregunta se expande/colapsa al hacer click en su encabezado.
+          ---------------------------------------------------------------- */}
       <section className="faq-list mb-5" aria-label="Listado de preguntas frecuentes">
         {filteredFaqs.length === 0 ? (
-          <div className="card p-4 text-center text-muted">
+          <div className="bg-white border border-slate-200 rounded-lg p-4 text-center text-slate-500">
             No se encontraron respuestas para los criterios de busqueda ingresados.
           </div>
         ) : (
-          <div className="accordion" id="accordionFaq">
+          <div id="accordionFaq">
             {filteredFaqs.map((faq) => {
               const isOpen = openItem === faq.id;
               return (
-                <div key={faq.id} className="accordion-item mb-2 border rounded shadow-sm">
-                  <h2 className="accordion-header" id={`heading-${faq.id}`}>
+                <div key={faq.id} className="mb-2 border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                  <h2 id={`heading-${faq.id}`}>
                     <button
-                      className={`accordion-button ${isOpen ? "" : "collapsed"}`}
+                      className="accordion-btn"
                       type="button"
                       onClick={() => toggleAccordion(faq.id)}
                       aria-expanded={isOpen}
                       aria-controls={`collapse-${faq.id}`}
                     >
-                      <div className="d-flex flex-column text-start">
-                        <span className="badge bg-secondary mb-1 align-self-start">
+                      <div className="flex flex-col text-left">
+                        <span className="inline-block self-start bg-slate-500 text-white text-xs font-medium px-2 py-0.5 rounded mb-1">
                           {faq.category}
                         </span>
-                        <span className="fw-semibold">{faq.question}</span>
+                        <span className="font-semibold">{faq.question}</span>
                       </div>
                     </button>
                   </h2>
+                  {/* Contenido colapsable del acordeon, visible solo cuando isOpen es true */}
                   <div
                     id={`collapse-${faq.id}`}
-                    className={`accordion-collapse collapse ${isOpen ? "show" : ""}`}
+                    className={`${isOpen ? "block" : "hidden"}`}
                     aria-labelledby={`heading-${faq.id}`}
                   >
-                    <div className="accordion-body text-secondary">
+                    <div className="px-5 py-3 text-slate-500 border-t border-slate-100">
                       {faq.answer}
                     </div>
                   </div>
@@ -172,13 +177,13 @@ export default function Faq() {
       </section>
 
       {/* Seccion de contacto / atencion */}
-      <section className="card p-4 bg-light border-0 shadow-sm mb-4">
-        <h3 className="h5 mb-2">Tiene una duda adicional no listada?</h3>
-        <p className="text-muted mb-3">
+      <section className="bg-slate-50 rounded-lg p-4 shadow-sm mb-4">
+        <h3 className="text-lg font-semibold mb-2">Tiene una duda adicional no listada?</h3>
+        <p className="text-slate-500 mb-3">
           El equipo de soporte administrativo de Supermercado Requiem esta disponible
           para resolver cualquier incidencia relacionada con el inventario o la atencion en sala.
         </p>
-        <p className="small mb-0 text-muted">
+        <p className="text-sm mb-0 text-slate-500">
           Contacto interno: soporte@supermercadorequiem.local | Horario de atencion: Lunes a Sabado de 08:00 a 20:00 hrs.
         </p>
       </section>

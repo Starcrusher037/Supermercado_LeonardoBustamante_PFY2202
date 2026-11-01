@@ -1,3 +1,10 @@
+/* ================================================================
+   App.css - Estilos personalizados del proyecto SuperMercado Requiem
+   Estos estilos complementan las clases utilitarias de Tailwind CSS
+   para cubrir casos donde se requiere CSS custom o transiciones
+   especificas que no se expresan facilmente con utilidades.
+   ================================================================ */
+
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -12,7 +19,7 @@
   border-bottom: 2px solid #1e293b;
   position: sticky;
   top: 0;
-  z-index: 1020;
+  z-index: 50;
 }
 
 .brand-link {
@@ -111,7 +118,9 @@
   margin-top: 6px;
 }
 
-/* Formulario y Filtros */
+/* ----------------------------------------------------------------
+   Formulario y Filtros
+   ---------------------------------------------------------------- */
 .add-product-card {
   border: 1px solid #cbd5e1;
   border-radius: 10px;
@@ -124,7 +133,10 @@
   border-radius: 10px;
 }
 
-/* Tabla de Inventario */
+/* ----------------------------------------------------------------
+   Tabla de Inventario
+   Estilos para los encabezados y celdas de la tabla principal
+   ---------------------------------------------------------------- */
 .inventory-table th {
   font-size: 0.85rem;
   text-transform: uppercase;
@@ -155,7 +167,10 @@
   border-radius: 12px;
 }
 
-/* Badges de Estado */
+/* ----------------------------------------------------------------
+   Badges de Estado
+   Tres variantes para estados de stock: disponible, critico, agotado
+   ---------------------------------------------------------------- */
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -181,7 +196,11 @@
   color: #842029;
 }
 
-/* Menu de navegacion inferior (Bottom Navigation) */
+/* ----------------------------------------------------------------
+   Menu de navegacion inferior (Bottom Navigation)
+   Barra fija en la parte inferior de la pantalla para
+   navegacion rapida entre las secciones principales
+   ---------------------------------------------------------------- */
 .bottom-menu-bar {
   position: fixed;
   bottom: 0;
@@ -191,7 +210,7 @@
   background-color: #ffffff;
   border-top: 1px solid #cbd5e1;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
-  z-index: 1030;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,7 +264,9 @@
   white-space: nowrap;
 }
 
-/* Footer institucional */
+/* ----------------------------------------------------------------
+   Footer institucional
+   ---------------------------------------------------------------- */
 .site-footer {
   background-color: #0b1120;
   color: #94a3b8;
@@ -284,7 +305,61 @@
   border-color: #1e293b !important;
 }
 
-/* Responsive adjustments */
+/* ----------------------------------------------------------------
+   Estilos para inputs y selects con Tailwind
+   Dado que Bootstrap proveia estilos de formulario por defecto,
+   se definen aqui los estilos base para los controles del formulario
+   ---------------------------------------------------------------- */
+.form-input {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #1e293b;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-input:focus {
+  border-color: #0d6efd;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+.form-input::placeholder {
+  color: #94a3b8;
+}
+
+/* ----------------------------------------------------------------
+   Estilos para el acordeon de Preguntas Frecuentes
+   Implementacion propia que reemplaza el accordion de Bootstrap
+   ---------------------------------------------------------------- */
+.accordion-btn {
+  display: flex;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  text-align: left;
+  background-color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.accordion-btn:hover {
+  background-color: #f8fafc;
+}
+
+.accordion-btn[aria-expanded="true"] {
+  background-color: #f1f5f9;
+}
+
+/* ----------------------------------------------------------------
+   Responsive adjustments
+   ---------------------------------------------------------------- */
 @media (max-width: 576px) {
   .stat-value {
     font-size: 1.5rem;
