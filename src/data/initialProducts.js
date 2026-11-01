@@ -1,8 +1,16 @@
+export const generateId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
 export const initialProducts = [
   {
-    id: 1,
+    id: "prod-001",
     sku: "ALM-001",
     name: "Arroz Grano Largo 1kg",
+    brand: "Tucapel",
     category: "Alimentos Secos",
     stock: 45,
     minStock: 15,
@@ -10,9 +18,10 @@ export const initialProducts = [
     location: "Pasillo 1 - Estante A"
   },
   {
-    id: 2,
+    id: "prod-002",
     sku: "LAC-002",
     name: "Leche Entera 1L",
+    brand: "Colun",
     category: "Lacteos",
     stock: 12,
     minStock: 20,
@@ -20,9 +29,10 @@ export const initialProducts = [
     location: "Pasillo 2 - Refrigerador B"
   },
   {
-    id: 3,
+    id: "prod-003",
     sku: "PAN-003",
     name: "Pan de Molde Integral 500g",
+    brand: "Ideal",
     category: "Panaderia",
     stock: 28,
     minStock: 10,
@@ -30,9 +40,10 @@ export const initialProducts = [
     location: "Pasillo 3 - Estante C"
   },
   {
-    id: 4,
+    id: "prod-004",
     sku: "BEB-004",
     name: "Jugo Natural de Naranja 1.5L",
+    brand: "Watts",
     category: "Bebidas",
     stock: 4,
     minStock: 10,
@@ -40,9 +51,10 @@ export const initialProducts = [
     location: "Pasillo 2 - Refrigerador A"
   },
   {
-    id: 5,
+    id: "prod-005",
     sku: "LIM-005",
     name: "Detergente Liquido Multiuso 3L",
+    brand: "Omo",
     category: "Limpieza",
     stock: 18,
     minStock: 8,
@@ -50,9 +62,10 @@ export const initialProducts = [
     location: "Pasillo 4 - Estante D"
   },
   {
-    id: 6,
+    id: "prod-006",
     sku: "CAR-006",
     name: "Pechuga de Pollo Fresca 1kg",
+    brand: "Super Pollo",
     category: "Carniceria",
     stock: 0,
     minStock: 12,
@@ -60,9 +73,10 @@ export const initialProducts = [
     location: "Pasillo 5 - Camara Fria"
   },
   {
-    id: 7,
+    id: "prod-007",
     sku: "FRU-007",
     name: "Manzana Royal Gala 1kg",
+    brand: "Fruticola del Sur",
     category: "Frutas y Verduras",
     stock: 35,
     minStock: 15,
@@ -70,9 +84,10 @@ export const initialProducts = [
     location: "Zona Frescos - Mesa 2"
   },
   {
-    id: 8,
+    id: "prod-008",
     sku: "LAC-008",
     name: "Queso Laminado Gauda 250g",
+    brand: "Soprole",
     category: "Lacteos",
     stock: 3,
     minStock: 10,
