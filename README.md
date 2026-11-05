@@ -2,7 +2,7 @@
 
 ## Proyecto: Supermercado Requiem - Sistema de Gestion de Inventario
 
-Repositorio desarrollado para la evaluacion formativa de la Semana 2. La aplicacion continua el desarrollo del sitio web de gestion de inventario para un supermercado, implementando gestion de estado global con Context API y Hooks personalizados, separacion de responsabilidades en subcomponentes reutilizables, navegacion multipantalla con React Router, inclusion de las paginas solicitadas del catalogo institucional y estilizacion responsiva mediante Tailwind CSS.
+Repositorio desarrollado para la evaluacion formativa de la Semana 2. La aplicacion continua el desarrollo del sitio web de gestion de inventario para un supermercado, implementando gestion de estado global con Context API y Hooks personalizados, separacion de responsabilidades en subcomponentes reutilizables, navegacion multipantalla con React Router, inclusion de las paginas solicitadas del catalogo y estilizacion responsiva mediante Tailwind CSS.
 
 ---
 

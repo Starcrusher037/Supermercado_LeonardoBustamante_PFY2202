@@ -6,6 +6,8 @@ import Footer from "./components/Footer";
 import HomeInventory from "./pages/HomeInventory";
 import AddProductPage from "./pages/AddProductPage";
 import InventoryTablePage from "./pages/InventoryTablePage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import CartPage from "./pages/CartPage";
 import OurStores from "./pages/OurStores";
 import ContactUs from "./pages/ContactUs";
 import HowToBuy from "./pages/HowToBuy";
@@ -25,10 +27,12 @@ function App() {
           {/* Contenido principal segun la ruta activa */}
           <main className="main-content">
             <Routes>
-              {/* Rutas de gestion de inventario */}
+              {/* Rutas de gestion de inventario y carrito */}
               <Route path="/" element={<HomeInventory />} />
               <Route path="/nuevo-articulo" element={<AddProductPage />} />
               <Route path="/articulos" element={<InventoryTablePage />} />
+              <Route path="/articulos/:id" element={<ProductDetailPage />} />
+              <Route path="/carrito" element={<CartPage />} />
 
               {/* Rutas institucionales del supermercado */}
               <Route path="/quienes-somos" element={<AboutUs />} />
