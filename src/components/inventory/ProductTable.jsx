@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useInventory } from "../../hooks/useInventory";
 
 export default function ProductTable({ items, showActions = true }) {
@@ -48,9 +49,23 @@ export default function ProductTable({ items, showActions = true }) {
                   key={item.id}
                   className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
                 >
-                  <td className="font-semibold text-monospace">{item.sku}</td>
+                  <td className="font-semibold text-monospace">
+                    <Link
+                      to={`/articulos/${item.id}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      title={`Ver detalle de ${item.name}`}
+                    >
+                      {item.sku}
+                    </Link>
+                  </td>
                   <td>
-                    <div className="font-bold text-slate-800">{item.name}</div>
+                    <Link
+                      to={`/articulos/${item.id}`}
+                      className="font-bold text-slate-800 hover:text-blue-600 hover:underline block"
+                      title={`Ver detalle de ${item.name}`}
+                    >
+                      {item.name}
+                    </Link>
                     <small className="text-slate-500">
                       Minimo sugerido: {item.minStock} un.
                     </small>
@@ -81,35 +96,44 @@ export default function ProductTable({ items, showActions = true }) {
                   </td>
                   {showActions && (
                     <td className="text-center">
-                      <div className="inline-flex rounded-md shadow-sm" role="group">
-                        <button
-                          type="button"
-                          className="px-2 py-1 text-sm border border-slate-300 text-slate-600 rounded-l-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => adjustStock(item.id, -1)}
-                          disabled={item.stock <= 0}
-                          title="Disminuir 1 unidad"
-                          aria-label={`Disminuir stock de ${item.name}`}
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        <Link
+                          to={`/articulos/${item.id}`}
+                          className="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                          title="Ver detalle del articulo y agregar al carrito"
                         >
-                          -1
-                        </button>
-                        <button
-                          type="button"
-                          className="px-2 py-1 text-sm border-t border-b border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors"
-                          onClick={() => adjustStock(item.id, 1)}
-                          title="Aumentar 1 unidad"
-                          aria-label={`Aumentar stock de ${item.name}`}
-                        >
-                          +1
-                        </button>
-                        <button
-                          type="button"
-                          className="px-2 py-1 text-sm border border-red-300 text-red-600 rounded-r-md hover:bg-red-50 transition-colors"
-                          onClick={() => deleteProduct(item.id, item.name)}
-                          title="Eliminar producto"
-                          aria-label={`Eliminar articulo ${item.name}`}
-                        >
-                          Eliminar
-                        </button>
+                          Ver Detalle
+                        </Link>
+                        <div className="inline-flex rounded-md shadow-sm" role="group">
+                          <button
+                            type="button"
+                            className="px-2 py-1 text-sm border border-slate-300 text-slate-600 rounded-l-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => adjustStock(item.id, -1)}
+                            disabled={item.stock <= 0}
+                            title="Disminuir 1 unidad"
+                            aria-label={`Disminuir stock de ${item.name}`}
+                          >
+                            -1
+                          </button>
+                          <button
+                            type="button"
+                            className="px-2 py-1 text-sm border-t border-b border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors"
+                            onClick={() => adjustStock(item.id, 1)}
+                            title="Aumentar 1 unidad"
+                            aria-label={`Aumentar stock de ${item.name}`}
+                          >
+                            +1
+                          </button>
+                          <button
+                            type="button"
+                            className="px-2 py-1 text-sm border border-red-300 text-red-600 rounded-r-md hover:bg-red-50 transition-colors"
+                            onClick={() => deleteProduct(item.id, item.name)}
+                            title="Eliminar producto"
+                            aria-label={`Eliminar articulo ${item.name}`}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </div>
                     </td>
                   )}

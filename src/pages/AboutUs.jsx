@@ -10,7 +10,7 @@ export default function AboutUs() {
 
       {/* Seccion principal / Resumen */}
       <section className="bg-slate-50 rounded-lg p-4 mb-4 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-center">
           <div className="lg:col-span-2">
             <h2 className="text-xl font-semibold text-blue-600 mb-3">Nuestra Trayectoria</h2>
             <p className="text-base text-slate-500 leading-relaxed">

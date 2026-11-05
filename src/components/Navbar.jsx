@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useInventory } from "../hooks/useInventory";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { cartCount } = useInventory();
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -15,7 +17,7 @@ export default function Navbar() {
           <span className="brand-title">Supermercado Requiem</span>
           <span className="brand-subtitle hidden lg:inline">| Control de Inventario</span>
         </NavLink>
-
+        
         {/* Boton hamburguesa para pantallas pequenas */}
         <button
           type="button"
@@ -52,6 +54,19 @@ export default function Navbar() {
             className={({ isActive }) => `nav-link-btn ${isActive ? "active" : ""}`}
           >
             Tabla Articulos
+          </NavLink>
+          <NavLink
+            to="/carrito"
+            className={({ isActive }) =>
+              `nav-link-btn flex items-center gap-1.5 ${isActive ? "active" : ""}`
+            }
+          >
+            <span>Carrito</span>
+            {cartCount > 0 && (
+              <span className="bg-emerald-500 text-white text-xs font-bold px-1.5 py-0.2 rounded-full">
+                {cartCount}
+              </span>
+            )}
           </NavLink>
           <NavLink
             to="/nuestras-tiendas"
@@ -110,6 +125,20 @@ export default function Navbar() {
             className={({ isActive }) => `nav-link-btn ${isActive ? "active" : ""}`}
           >
             Tabla de Articulos
+          </NavLink>
+          <NavLink
+            to="/carrito"
+            onClick={closeMenu}
+            className={({ isActive }) =>
+              `nav-link-btn flex items-center justify-between ${isActive ? "active" : ""}`
+            }
+          >
+            <span>Carrito de Compras</span>
+            {cartCount > 0 && (
+              <span className="bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {cartCount} un.
+              </span>
+            )}
           </NavLink>
           <NavLink
             to="/nuestras-tiendas"
