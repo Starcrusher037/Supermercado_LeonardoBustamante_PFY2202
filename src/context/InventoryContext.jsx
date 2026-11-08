@@ -1,78 +1,382 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useReducer, useEffect, useMemo, useCallback } from "react";
 import { initialProducts, generateId } from "../data/initialProducts";
 import { InventoryContext } from "./inventoryContextDef";
 
 const STORAGE_KEY = "smr_inventory_products_v2";
 const CART_STORAGE_KEY = "smr_inventory_cart_v1";
 
+/**
+ * Acciones soportadas por el reducer para el manejo centralizado y atomico
+ * del inventario y del carrito de compras.
+ */
+const INVENTORY_ACTIONS = {
+  SET_NOTIFICATION: "SET_NOTIFICATION",
+  CLEAR_NOTIFICATION: "CLEAR_NOTIFICATION",
+  ADD_PRODUCT: "ADD_PRODUCT",
+  ADJUST_STOCK: "ADJUST_STOCK",
+  DELETE_PRODUCT: "DELETE_PRODUCT",
+  RESET_INVENTORY: "RESET_INVENTORY",
+  ADD_TO_CART: "ADD_TO_CART",
+  UPDATE_CART_QUANTITY: "UPDATE_CART_QUANTITY",
+  REMOVE_FROM_CART: "REMOVE_FROM_CART",
+  CLEAR_CART: "CLEAR_CART",
+  CHECKOUT_CART: "CHECKOUT_CART"
+};
+
+/**
+ * Inicializador perezoso (lazy initializer) para useReducer.
+ * Carga de forma segura el inventario y el carrito desde localStorage,
+ * o recurre a los datos semilla iniciales si el almacenamiento esta vacio.
+ *
+ * @returns {Object} Estado inicial { products, cart, feedbackMessage }
+ */
+const initInventoryState = () => {
+  let products = initialProducts;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        products = parsed.map((item) => ({
+          ...item,
+          brand: item.brand || "Sin marca especificada"
+        }));
+      }
+    }
+  } catch {
+    // Lectura de respaldo en caso de datos corruptos
+  }
+
+  let cart = [];
+  try {
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (savedCart) {
+      const parsedCart = JSON.parse(savedCart);
+      if (Array.isArray(parsedCart)) {
+        cart = parsedCart;
+      }
+    }
+  } catch {
+    // Lectura de respaldo en caso de datos corruptos
+  }
+
+  return {
+    products,
+    cart,
+    feedbackMessage: null
+  };
+};
+
+/**
+ * Reducer puro que gestiona las transiciones del estado global.
+ * Al unificar 'products' y 'cart' bajo un solo reducer, garantizamos
+ * que las operaciones sean atomicas: la deduccion o reposicion en bodega
+ * se produce de manera sincronizada con la adicion o retiro del carrito.
+ *
+ * @param {Object} state - Estado actual { products, cart, feedbackMessage }
+ * @param {Object} action - Objeto de accion { type, payload }
+ * @returns {Object} Nuevo estado inmutable
+ */
+function inventoryReducer(state, action) {
+  switch (action.type) {
+    case INVENTORY_ACTIONS.SET_NOTIFICATION:
+      return {
+        ...state,
+        feedbackMessage: action.payload
+      };
+
+    case INVENTORY_ACTIONS.CLEAR_NOTIFICATION:
+      return {
+        ...state,
+        feedbackMessage: null
+      };
+
+    case INVENTORY_ACTIONS.ADD_PRODUCT:
+      return {
+        ...state,
+        products: [action.payload, ...state.products],
+        feedbackMessage: {
+          message: `Producto "${action.payload.name}" registrado correctamente en el inventario.`,
+          type: "success"
+        }
+      };
+
+    case INVENTORY_ACTIONS.ADJUST_STOCK: {
+      const { id, delta } = action.payload;
+      return {
+        ...state,
+        products: state.products.map((item) => {
+          if (item.id === id) {
+            const nextStock = Math.max(0, item.stock + delta);
+            return { ...item, stock: nextStock };
+          }
+          return item;
+        })
+      };
+    }
+
+    case INVENTORY_ACTIONS.DELETE_PRODUCT: {
+      const { id, name } = action.payload;
+      return {
+        ...state,
+        products: state.products.filter((item) => item.id !== id),
+        cart: state.cart.filter((item) => item.id !== id),
+        feedbackMessage: {
+          message: `Articulo "${name}" eliminado del inventario.`,
+          type: "warning"
+        }
+      };
+    }
+
+    case INVENTORY_ACTIONS.RESET_INVENTORY:
+      return {
+        ...state,
+        products: initialProducts,
+        cart: [],
+        feedbackMessage: {
+          message: "Inventario restablecido con el catalogo original.",
+          type: "info"
+        }
+      };
+
+    case INVENTORY_ACTIONS.ADD_TO_CART: {
+      const { productId, quantity } = action.payload;
+      const targetProduct = state.products.find((p) => p.id === productId);
+
+      if (!targetProduct || targetProduct.stock < quantity) {
+        return {
+          ...state,
+          feedbackMessage: {
+            message: targetProduct
+              ? `Stock insuficiente: solo quedan ${targetProduct.stock} unidad(es) de "${targetProduct.name}".`
+              : "El articulo no existe en el catalogo.",
+            type: "warning"
+          }
+        };
+      }
+
+      // Descuento atomico de existencias en el inventario
+      const updatedProducts = state.products.map((item) =>
+        item.id === productId
+          ? { ...item, stock: Math.max(0, item.stock - quantity) }
+          : item
+      );
+
+      // Insercion o acumulacion en el carrito de compras
+      const existingCartIndex = state.cart.findIndex((item) => item.id === productId);
+      let updatedCart;
+
+      if (existingCartIndex >= 0) {
+        updatedCart = [...state.cart];
+        updatedCart[existingCartIndex] = {
+          ...updatedCart[existingCartIndex],
+          quantity: updatedCart[existingCartIndex].quantity + quantity
+        };
+      } else {
+        updatedCart = [
+          ...state.cart,
+          {
+            id: targetProduct.id,
+            sku: targetProduct.sku,
+            name: targetProduct.name,
+            brand: targetProduct.brand,
+            category: targetProduct.category,
+            price: targetProduct.price,
+            quantity
+          }
+        ];
+      }
+
+      return {
+        ...state,
+        products: updatedProducts,
+        cart: updatedCart,
+        feedbackMessage: {
+          message: `Se agregaron ${quantity} unidad(es) de "${targetProduct.name}" al carrito.`,
+          type: "success"
+        }
+      };
+    }
+
+    case INVENTORY_ACTIONS.UPDATE_CART_QUANTITY: {
+      const { productId, delta } = action.payload;
+
+      // Caso A: Aumentar cantidad en el carrito (+1)
+      if (delta > 0) {
+        const productInInventory = state.products.find((p) => p.id === productId);
+        if (!productInInventory || productInInventory.stock < delta) {
+          return {
+            ...state,
+            feedbackMessage: {
+              message: "No quedan mas existencias disponibles en el inventario para agregar este articulo.",
+              type: "warning"
+            }
+          };
+        }
+
+        return {
+          ...state,
+          products: state.products.map((item) =>
+            item.id === productId
+              ? { ...item, stock: item.stock - delta }
+              : item
+          ),
+          cart: state.cart.map((item) =>
+            item.id === productId
+              ? { ...item, quantity: item.quantity + delta }
+              : item
+          )
+        };
+      }
+
+      // Caso B: Disminuir cantidad en el carrito (-1)
+      if (delta < 0) {
+        const unitsToRestore = Math.abs(delta);
+        const targetCartItem = state.cart.find((item) => item.id === productId);
+
+        if (!targetCartItem) return state;
+
+        const willRemove = targetCartItem.quantity <= unitsToRestore;
+        const updatedCart = willRemove
+          ? state.cart.filter((item) => item.id !== productId)
+          : state.cart.map((item) =>
+              item.id === productId
+                ? { ...item, quantity: item.quantity - unitsToRestore }
+                : item
+            );
+
+        return {
+          ...state,
+          products: state.products.map((item) =>
+            item.id === productId
+              ? { ...item, stock: item.stock + unitsToRestore }
+              : item
+          ),
+          cart: updatedCart,
+          feedbackMessage: willRemove
+            ? { message: "Articulo removido del carrito de compras.", type: "info" }
+            : state.feedbackMessage
+        };
+      }
+
+      return state;
+    }
+
+    case INVENTORY_ACTIONS.REMOVE_FROM_CART: {
+      const { productId } = action.payload;
+      const cartItem = state.cart.find((item) => item.id === productId);
+      if (!cartItem) return state;
+
+      const restoredQty = cartItem.quantity;
+      return {
+        ...state,
+        cart: state.cart.filter((item) => item.id !== productId),
+        products: state.products.map((item) =>
+          item.id === productId
+            ? { ...item, stock: item.stock + restoredQty }
+            : item
+        ),
+        feedbackMessage: {
+          message: `"${cartItem.name}" fue retirado del carrito. Se restablecieron ${restoredQty} unidad(es) al inventario.`,
+          type: "info"
+        }
+      };
+    }
+
+    case INVENTORY_ACTIONS.CLEAR_CART: {
+      const { restoreStock } = action.payload;
+      if (state.cart.length === 0) return state;
+
+      if (restoreStock) {
+        const restoreMap = state.cart.reduce((acc, item) => {
+          acc[item.id] = (acc[item.id] || 0) + item.quantity;
+          return acc;
+        }, {});
+
+        return {
+          ...state,
+          cart: [],
+          products: state.products.map((item) =>
+            restoreMap[item.id]
+              ? { ...item, stock: item.stock + restoreMap[item.id] }
+              : item
+          ),
+          feedbackMessage: {
+            message: "Carrito vaciado. Se restablecieron todas las existencias al inventario.",
+            type: "info"
+          }
+        };
+      }
+
+      return {
+        ...state,
+        cart: []
+      };
+    }
+
+    case INVENTORY_ACTIONS.CHECKOUT_CART:
+      if (state.cart.length === 0) {
+        return {
+          ...state,
+          feedbackMessage: {
+            message: "El carrito esta vacio.",
+            type: "warning"
+          }
+        };
+      }
+
+      return {
+        ...state,
+        cart: [],
+        feedbackMessage: {
+          message: "Compra procesada exitosamente. Las existencias del inventario se han actualizado de forma definitiva.",
+          type: "success"
+        }
+      };
+
+    default:
+      return state;
+  }
+}
+
 export function InventoryProvider({ children }) {
-  const [products, setProducts] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Asegura compatibilidad con versiones previas agregando marca si no existe
-          return parsed.map((item) => ({
-            ...item,
-            brand: item.brand || "Sin marca especificada"
-          }));
-        }
-      }
-    } catch {
-      // Si ocurre un error de lectura, se recurre a la lista inicial
-    }
-    return initialProducts;
-  });
+  const [state, dispatch] = useReducer(inventoryReducer, undefined, initInventoryState);
 
-  // Estado del carrito de compras sincronizado con localStorage
-  const [cart, setCart] = useState(() => {
-    try {
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-      if (savedCart) {
-        const parsedCart = JSON.parse(savedCart);
-        if (Array.isArray(parsedCart)) {
-          return parsedCart;
-        }
-      }
-    } catch {
-      // En caso de error se inicializa como arreglo vacio
-    }
-    return [];
-  });
-
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-
-  // Sincronizacion con localStorage ante cualquier mutacion del inventario
+  // Sincronizacion del inventario en localStorage ante cualquier cambio
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.products));
     } catch {
-      // Manejo de error de cuota de almacenamiento local si aplica
+      // Manejo silencioso de cuota de almacenamiento local si aplica
     }
-  }, [products]);
+  }, [state.products]);
 
-  // Sincronizacion del carrito en localStorage
+  // Sincronizacion del carrito en localStorage ante cualquier cambio
   useEffect(() => {
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart));
     } catch {
-      // Manejo silencioso de cuota de almacenamiento local
+      // Manejo silencioso de cuota de almacenamiento local si aplica
     }
-  }, [cart]);
+  }, [state.cart]);
 
+  // Manejador temporizado de notificaciones
   const showNotification = useCallback((message, type = "info") => {
-    setFeedbackMessage({ message, type });
+    dispatch({
+      type: INVENTORY_ACTIONS.SET_NOTIFICATION,
+      payload: { message, type }
+    });
     const timer = setTimeout(() => {
-      setFeedbackMessage(null);
+      dispatch({ type: INVENTORY_ACTIONS.CLEAR_NOTIFICATION });
     }, 4000);
     return () => clearTimeout(timer);
   }, []);
 
+  // Agregar nuevo producto validando unicidad de SKU
   const addProduct = useCallback(
     (productData) => {
       const normalizedSku = productData.sku.trim().toUpperCase();
-      const skuExists = products.some(
+      const skuExists = state.products.some(
         (p) => p.sku.trim().toUpperCase() === normalizedSku
       );
 
@@ -96,75 +400,49 @@ export function InventoryProvider({ children }) {
         location: productData.location?.trim() || "Bodega Central"
       };
 
-      setProducts((prev) => [newProduct, ...prev]);
-      showNotification(
-        `Producto "${newProduct.name}" registrado correctamente en el inventario.`,
-        "success"
-      );
+      dispatch({
+        type: INVENTORY_ACTIONS.ADD_PRODUCT,
+        payload: newProduct
+      });
+
       return { success: true, product: newProduct };
     },
-    [products, showNotification]
+    [state.products, showNotification]
   );
 
-  const adjustStock = useCallback(
-    (id, delta) => {
-      setProducts((prev) =>
-        prev.map((item) => {
-          if (item.id === id) {
-            const nextStock = Math.max(0, item.stock + delta);
-            return { ...item, stock: nextStock };
-          }
-          return item;
-        })
-      );
-    },
-    []
-  );
+  const adjustStock = useCallback((id, delta) => {
+    dispatch({
+      type: INVENTORY_ACTIONS.ADJUST_STOCK,
+      payload: { id, delta }
+    });
+  }, []);
 
-  const deleteProduct = useCallback(
-    (id, name) => {
-      const confirmed = window.confirm(
-        `Confirma que desea eliminar el articulo "${name}" del inventario?`
-      );
-      if (confirmed) {
-        setProducts((prev) => prev.filter((item) => item.id !== id));
-        // Si el articulo estaba en el carrito, se limpia para mantener consistencia
-        setCart((prev) => prev.filter((item) => item.id !== id));
-        showNotification(
-          `Articulo "${name}" eliminado del inventario.`,
-          "warning"
-        );
-      }
-    },
-    [showNotification]
-  );
+  const deleteProduct = useCallback((id, name) => {
+    const confirmed = window.confirm(
+      `Confirma que desea eliminar el articulo "${name}" del inventario?`
+    );
+    if (confirmed) {
+      dispatch({
+        type: INVENTORY_ACTIONS.DELETE_PRODUCT,
+        payload: { id, name }
+      });
+    }
+  }, []);
 
   const resetInventory = useCallback(() => {
     const confirmed = window.confirm(
       "Desea restablecer el inventario al catalogo original de prueba?"
     );
     if (confirmed) {
-      setProducts(initialProducts);
-      setCart([]);
       try {
         localStorage.removeItem(CART_STORAGE_KEY);
       } catch {
         // Manejo silencioso
       }
-      showNotification(
-        "Inventario restablecido con el catalogo original.",
-        "info"
-      );
+      dispatch({ type: INVENTORY_ACTIONS.RESET_INVENTORY });
     }
-  }, [showNotification]);
+  }, []);
 
-  /**
-   * Agrega un articulo al carrito y descuenta de inmediato su existencia del inventario general.
-   * Maneja la sincronizacion atomica entre products y cart:
-   * 1. Valida que el stock disponible en inventario sea suficiente para la cantidad solicitada.
-   * 2. Si hay stock, resta 'quantity' del stock del producto en el inventario general.
-   * 3. Si el producto ya existia en el carrito, incrementa su cantidad; de lo contrario, lo agrega como nuevo item.
-   */
   const addToCart = useCallback(
     (productId, quantity = 1) => {
       const targetQty = Number(quantity) || 1;
@@ -172,8 +450,7 @@ export function InventoryProvider({ children }) {
         return { success: false, error: "La cantidad debe ser mayor a 0." };
       }
 
-      // Verificacion previa sobre el estado actual
-      const targetProduct = products.find((p) => p.id === productId);
+      const targetProduct = state.products.find((p) => p.id === productId);
       if (!targetProduct) {
         showNotification("El articulo no existe en el catalogo.", "error");
         return { success: false, error: "Producto no encontrado" };
@@ -187,62 +464,20 @@ export function InventoryProvider({ children }) {
         return { success: false, error: "Stock insuficiente" };
       }
 
-      // 1. Restar la cantidad seleccionada del inventario general
-      setProducts((prevProducts) =>
-        prevProducts.map((item) =>
-          item.id === productId
-            ? { ...item, stock: Math.max(0, item.stock - targetQty) }
-            : item
-        )
-      );
-
-      // 2. Agregar o acumular la cantidad en el carrito de compras
-      setCart((prevCart) => {
-        const existingIndex = prevCart.findIndex((item) => item.id === productId);
-        if (existingIndex >= 0) {
-          const updated = [...prevCart];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: updated[existingIndex].quantity + targetQty
-          };
-          return updated;
-        }
-
-        return [
-          ...prevCart,
-          {
-            id: targetProduct.id,
-            sku: targetProduct.sku,
-            name: targetProduct.name,
-            brand: targetProduct.brand,
-            category: targetProduct.category,
-            price: targetProduct.price,
-            quantity: targetQty
-          }
-        ];
+      dispatch({
+        type: INVENTORY_ACTIONS.ADD_TO_CART,
+        payload: { productId, quantity: targetQty }
       });
 
-      showNotification(
-        `Se agregaron ${targetQty} unidad(es) de "${targetProduct.name}" al carrito.`,
-        "success"
-      );
       return { success: true };
     },
-    [products, showNotification]
+    [state.products, showNotification]
   );
 
-  /**
-   * Modifica dinamicamente la cantidad de un articulo dentro del carrito (+1 o -1),
-   * actualizando en sentido inverso el inventario general para conservar la consistencia:
-   * - Al aumentar (+1 en carrito): se verifica que haya stock en inventario y se descuenta 1 unidad del stock general.
-   * - Al disminuir (-1 en carrito): se devuelve 1 unidad al inventario general. Si la cantidad en el carrito llega a 0,
-   *   el articulo se remueve automaticamente del carrito.
-   */
   const updateCartQuantity = useCallback(
     (productId, delta) => {
-      // Caso 1: Aumentar cantidad en el carrito (requiere restar 1 del inventario general)
       if (delta > 0) {
-        const productInInventory = products.find((p) => p.id === productId);
+        const productInInventory = state.products.find((p) => p.id === productId);
         if (!productInInventory || productInInventory.stock < delta) {
           showNotification(
             "No quedan mas existencias disponibles en el inventario para agregar este articulo.",
@@ -250,169 +485,55 @@ export function InventoryProvider({ children }) {
           );
           return false;
         }
-
-        // Restar de inventario general
-        setProducts((prev) =>
-          prev.map((item) =>
-            item.id === productId
-              ? { ...item, stock: item.stock - delta }
-              : item
-          )
-        );
-
-        // Sumar al carrito
-        setCart((prev) =>
-          prev.map((item) =>
-            item.id === productId
-              ? { ...item, quantity: item.quantity + delta }
-              : item
-          )
-        );
-        return true;
       }
 
-      // Caso 2: Disminuir cantidad en el carrito (devuelve la unidad al inventario general)
-      if (delta < 0) {
-        const unitsToRestore = Math.abs(delta);
-        let removed = false;
-
-        setCart((prev) => {
-          const target = prev.find((item) => item.id === productId);
-          if (!target) return prev;
-
-          if (target.quantity <= unitsToRestore) {
-            removed = true;
-            return prev.filter((item) => item.id !== productId);
-          }
-
-          return prev.map((item) =>
-            item.id === productId
-              ? { ...item, quantity: item.quantity - unitsToRestore }
-              : item
-          );
-        });
-
-        // Devolver las existencias al inventario general
-        setProducts((prev) =>
-          prev.map((item) =>
-            item.id === productId
-              ? { ...item, stock: item.stock + unitsToRestore }
-              : item
-          )
-        );
-
-        if (removed) {
-          showNotification("Articulo removido del carrito de compras.", "info");
-        }
-        return true;
-      }
-
-      return false;
+      dispatch({
+        type: INVENTORY_ACTIONS.UPDATE_CART_QUANTITY,
+        payload: { productId, delta }
+      });
+      return true;
     },
-    [products, showNotification]
+    [state.products, showNotification]
   );
 
-  /**
-   * Remueve por completo un articulo del carrito y devuelve todas sus unidades
-   * reservadas al inventario general.
-   */
-  const removeFromCart = useCallback(
-    (productId) => {
-      const cartItem = cart.find((item) => item.id === productId);
-      if (!cartItem) return;
+  const removeFromCart = useCallback((productId) => {
+    dispatch({
+      type: INVENTORY_ACTIONS.REMOVE_FROM_CART,
+      payload: { productId }
+    });
+  }, []);
 
-      const restoredQty = cartItem.quantity;
+  const clearCart = useCallback((restoreStock = true) => {
+    dispatch({
+      type: INVENTORY_ACTIONS.CLEAR_CART,
+      payload: { restoreStock }
+    });
+  }, []);
 
-      // Retirar del carrito
-      setCart((prev) => prev.filter((item) => item.id !== productId));
-
-      // Restituir todas las unidades al inventario general
-      setProducts((prev) =>
-        prev.map((item) =>
-          item.id === productId
-            ? { ...item, stock: item.stock + restoredQty }
-            : item
-        )
-      );
-
-      showNotification(
-        `"${cartItem.name}" fue retirado del carrito. Se restablecieron ${restoredQty} unidad(es) al inventario.`,
-        "info"
-      );
-    },
-    [cart, showNotification]
-  );
-
-  /**
-   * Vacia el carrito.
-   * Si restoreStock es verdadero, reintegra al inventario general las existencias de todos los articulos.
-   * Si es falso (por ejemplo, al confirmar y finalizar la compra), mantiene el descuento en inventario.
-   */
-  const clearCart = useCallback(
-    (restoreStock = true) => {
-      if (cart.length === 0) return;
-
-      if (restoreStock) {
-        const restoreMap = cart.reduce((acc, item) => {
-          acc[item.id] = (acc[item.id] || 0) + item.quantity;
-          return acc;
-        }, {});
-
-        setProducts((prev) =>
-          prev.map((item) =>
-            restoreMap[item.id]
-              ? { ...item, stock: item.stock + restoreMap[item.id] }
-              : item
-          )
-        );
-        showNotification(
-          "Carrito vaciado. Se restablecieron todas las existencias al inventario.",
-          "info"
-        );
-      }
-
-      setCart([]);
-    },
-    [cart, showNotification]
-  );
-
-  /**
-   * Finaliza la compra de los articulos del carrito:
-   * Las existencias ya fueron descontadas del inventario al momento de agregarse al carrito,
-   * por lo que simplemente se limpia el carrito confirmando la operacion exitosa.
-   */
   const checkoutCart = useCallback(() => {
-    if (cart.length === 0) {
-      showNotification("El carrito esta vacio.", "warning");
-      return;
-    }
-
-    setCart([]);
-    showNotification(
-      "Compra procesada exitosamente. Las existencias del inventario se han actualizado de forma definitiva.",
-      "success"
-    );
-  }, [cart, showNotification]);
+    dispatch({ type: INVENTORY_ACTIONS.CHECKOUT_CART });
+  }, []);
 
   // Metricas computadas del carrito de compras
   const cartCount = useMemo(
-    () => cart.reduce((acc, item) => acc + item.quantity, 0),
-    [cart]
+    () => state.cart.reduce((acc, item) => acc + item.quantity, 0),
+    [state.cart]
   );
 
   const cartTotal = useMemo(
-    () => cart.reduce((acc, item) => acc + item.quantity * item.price, 0),
-    [cart]
+    () => state.cart.reduce((acc, item) => acc + item.quantity * item.price, 0),
+    [state.cart]
   );
 
+  // Metricas computadas del inventario general
   const metrics = useMemo(() => {
-    const totalItems = products.length;
-    const totalStock = products.reduce((acc, curr) => acc + curr.stock, 0);
-    const lowStockCount = products.filter(
+    const totalItems = state.products.length;
+    const totalStock = state.products.reduce((acc, curr) => acc + curr.stock, 0);
+    const lowStockCount = state.products.filter(
       (item) => item.stock > 0 && item.stock <= item.minStock
     ).length;
-    const outOfStockCount = products.filter((item) => item.stock === 0).length;
-    const totalValuation = products.reduce(
+    const outOfStockCount = state.products.filter((item) => item.stock === 0).length;
+    const totalValuation = state.products.reduce(
       (acc, curr) => acc + curr.stock * curr.price,
       0
     );
@@ -424,16 +545,16 @@ export function InventoryProvider({ children }) {
       outOfStockCount,
       totalValuation
     };
-  }, [products]);
+  }, [state.products]);
 
   const value = useMemo(
     () => ({
-      products,
+      products: state.products,
       metrics,
-      cart,
+      cart: state.cart,
       cartCount,
       cartTotal,
-      feedbackMessage,
+      feedbackMessage: state.feedbackMessage,
       showNotification,
       addProduct,
       adjustStock,
@@ -446,12 +567,12 @@ export function InventoryProvider({ children }) {
       checkoutCart
     }),
     [
-      products,
+      state.products,
       metrics,
-      cart,
+      state.cart,
       cartCount,
       cartTotal,
-      feedbackMessage,
+      state.feedbackMessage,
       showNotification,
       addProduct,
       adjustStock,

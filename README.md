@@ -1,71 +1,80 @@
-# Actividad Individual Formativa: Implementando gestión de estado en componentes frontend con React
+# Actividad Sumativa Semana 3: Desarrollando sitios web con React avanzado
 
-## Proyecto: Supermercado Requiem - Sistema de Gestión de Inventario y Carrito
+## Proyecto: Supermercado Requiem - Sistema Integral de Inventario y Carrito
 
-Repositorio desarrollado para la gestión de inventario y compras de un supermercado, implementando gestión de estado global con **Context API** y Hooks personalizados, separación de responsabilidades en subcomponentes reutilizables, navegación multipantalla con **React Router**, catálogo interactivo con fichas técnicas, filtro dinámico inmutable, módulo de carrito con sincronización bidireccional de existencias en bodega y estilización responsiva mediante **Tailwind CSS**.
+Repositorio desarrollado para la gestion de inventario y compras de un supermercado, implementando tecnologias avanzadas de React tales como arquitectura de estado centralizado con **Context API** y **useReducer** para transacciones atomicas, validacion de formularios mediante **expresiones regulares (RegEx)**, enrutamiento desacoplado con **HashRouter** optimizado para **GitHub Pages**, filtrado inmutable multidimensional, catalogo con fichas tecnicas detalladas, modulo de carrito con sincronizacion bidireccional y estilizacion responsiva mediante **Tailwind CSS v4**.
 
----
-
-## 1. Actualizaciones y Mejoras Recientes
-
-Se implementaron mejoras clave en la aplicación para enriquecer el flujo de usuario y la consistencia de los datos:
-
-- **Filtro dinámico inmutable por categoría (`InventoryTablePage.jsx`)**: Incorporación de filtrado dinámico reactivo por categoría y término de búsqueda que mantiene inmutables los datos originales del catálogo global en el contexto.
-- **Ficha técnica detallada (`ProductDetailPage.jsx`)**: Vista de detalle para cada artículo (`/articulos/:id`) con especificaciones completas (SKU, marca, categoría, ubicación en bodega, stock restante, precio) y selector de cantidades para agregar directamente al carrito.
-- **Adición de artículos con control automático de stock (`ProductDetailPage.jsx` y `ProductTable.jsx`)**: Posibilidad de añadir artículos al carrito descontando automáticamente las unidades disponibles en bodega, bloqueando o deshabilitando los botones de acción cuando no hay existencias.
-- **Módulo de Carrito de Compras (`CartPage.jsx`) con sincronización bidireccional**: Pantalla dedicada (`/carrito`) que permite:
-  - Incrementar o disminuir cantidades por producto sincronizando el stock de bodega en tiempo real.
-  - Eliminar artículos individuales o vaciar el carrito completo restituyendo automáticamente las unidades al inventario.
-  - Finalizar la compra consolidando de forma definitiva la deducción de unidades en el stock.
-- **Centralización y Persistencia en Context API (`InventoryContext.jsx`)**: Toda la lógica de negocio, tanto de productos como del carrito, se centralizó en el contexto global respaldado en `localStorage` (`smr_inventory_products_v2` y `smr_inventory_cart_v1`) y optimizado con valores derivados (`cartCount`, `cartTotal`, `metrics`).
-- **Navegación extendida con insignias y contadores (`App.jsx`, `Navbar.jsx`, `BottomNav.jsx`)**: Integración de las nuevas rutas `/articulos/:id` y `/carrito`, incorporando insignias visuales (badges) y contadores dinámicos de artículos en el carrito en las barras de navegación móvil y de escritorio.
+- Enlace publico en GitHub Pages: https://starcrusher037.github.io/Supermercado_LeonardoBustamante_PFY2202/
+- Repositorio GitHub: https://github.com/Starcrusher037/Supermercado_LeonardoBustamante_PFY2202
 
 ---
 
-## 2. Características y Requerimientos Implementados
+## 1. Novedades y Mejoras Implementadas (Semana 3)
 
-### A. Gestión de Estado Global y Custom Hook (`useInventory`)
-- **Context API centralizada**: Ubicada en `src/context/InventoryContext.jsx` y `src/context/inventoryContextDef.js`.
-- **Custom Hook `useInventory`**: Provee acceso desacoplado al estado global desde cualquier componente o página, exponiendo:
-  - **Inventario**: `products`, `metrics` (`totalItems`, `totalStock`, `lowStockCount`, `outOfStockCount`, `totalValuation`), `addProduct`, `adjustStock`, `deleteProduct`, `resetInventory`.
-  - **Carrito**: `cart`, `cartCount`, `cartTotal`, `addToCart(product, quantity)`, `updateCartQuantity(id, delta)`, `removeFromCart(id)`, `clearCart()`, `checkoutCart()`.
-  - **Notificaciones**: `feedbackMessage` y `showNotification(msg, type)` para alertas contextuales de éxito, advertencia o error.
-- **Inmutabilidad y Sincronización Bidireccional**: Al agregar productos al carrito o alterar cantidades, el stock del inventario se descuenta o restituye de inmediato sin mutaciones directas. Si se cancela o vacía la compra, las unidades regresan a bodega; si se procesa el checkout, la salida queda consolidada.
-- **Doble Persistencia en LocalStorage**: Mantiene sincronizados tanto el inventario general como el carrito de compras ante recargas de página o navegación entre pestañas.
+### A. Gestion de Estado Atomica con useReducer
+Se refactorizo el nucleo del contexto (`src/context/InventoryContext.jsx`) abandonando estados locales aislados en favor del patron `useReducer`:
+- **Unificacion del estado global**: Se consolida el estado en un unico arbol `{ products, cart, feedbackMessage }`.
+- **Atomicidad bidireccional**: Al agregar productos al carrito o alterar cantidades, la deduccion o reposicion de existencias en bodega se procesa en la misma transaccion pura del reducer.
+- **Acciones formales**:
+  - `ADD_PRODUCT`: Registro de nuevos articulos validando unicidad de SKU.
+  - `ADJUST_STOCK`: Ajuste rapido de existencias en bodega.
+  - `DELETE_PRODUCT`: Eliminacion de articulo y limpieza automatica de referencias en carrito.
+  - `RESET_INVENTORY`: Restauracion del catalogo base semilla.
+  - `ADD_TO_CART`: Validacion de existencias, deduccion en bodega e inclusion en carrito.
+  - `UPDATE_CART_QUANTITY`: Incremento o decremento coordinado con reposicion o reserva en bodega.
+  - `REMOVE_FROM_CART`: Retiro de producto del carrito con restitucion total de unidades reservadas.
+  - `CLEAR_CART`: Vaciado total restituyendo el stock a bodega.
+  - `CHECKOUT_CART`: Cierre de compra definitiva conservando el descuento de bodega.
+  - `SET_NOTIFICATION` / `CLEAR_NOTIFICATION`: Feedback contextual temporizado.
 
-### B. Páginas y Navegación del Sitio
+### B. Validaciones con Expresiones Regulares (RegEx)
+Se implementaron validaciones formales para asegurar la integridad de datos:
+- **Formulario de Contacto (`ContactUs.jsx`)**:
+  - **Correo electronico**: `/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/` (validacion de formato estandar de correo).
+  - **Telefono de contacto**: `/^(\+?56)?(\s?)(9\s?\d{4}\s?\d{4}|\d{2}\s?\d{4}\s?\d{4})$/` (validacion de numeracion valida en Chile).
+  - **Nombre completo**: `/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{3,}$/` (minimo 3 caracteres alfabeticos).
+- **Formulario de Nuevo Articulo (`ProductForm.jsx`)**:
+  - **Codigo SKU**: `/^[A-Z]{3}-\d{3,4}$/` (estandar de retail: 3 letras mayusculas, guion y 3 o 4 numeros, ej: `LAC-010`, `BEB-004`).
+  - **Stock y Precio**: `/^\d+$/` (enteros positivos no negativos).
 
-#### Módulo de Inventario y Ventas:
-1. **Dashboard Principal (`/` - `HomeInventory.jsx`)**: Centro de control con métricas de KPI, acceso rápido a creación, filtros y tabla simplificada.
-2. **Página de Ingreso de Artículos (`/nuevo-articulo` - `AddProductPage.jsx`)**: Formulario con validación en tiempo real de campos requeridos (nombre, marca, tipo de producto, precio, stock, stock mínimo, ubicación).
-3. **Página de Tabla de Artículos (`/articulos` - `InventoryTablePage.jsx`)**: Vista de catálogo completo con filtro dinámico por categoría (inmutable), buscador reactivo, alertas de bajo stock y botones de adición directa al carrito.
-4. **Ficha Técnica Detallada (`/articulos/:id` - `ProductDetailPage.jsx`)**: Detalle individual del artículo seleccionado, visualización de indicadores de disponibilidad, desglose de datos logísticos y formulario para añadir unidades al carrito con validación de tope de existencias.
-5. **Carrito de Compras (`/carrito` - `CartPage.jsx`)**: Gestión integral de artículos reservados, cálculo automático de subtotal e impuestos/total, controles de incremento/decremento de unidades, opción para vaciar o confirmar la compra.
-
-#### Páginas Institucionales y de Atención:
-1. **Quiénes Somos (`/quienes-somos` - `AboutUs.jsx`)**: Misión, visión, valores institucionales y pilares logísticos.
-2. **Nuestras Tiendas (`/nuestras-tiendas` - `OurStores.jsx`)**: Red de sucursales con dirección, horarios, teléfono, filtro por ciudad y departamentos disponibles.
-3. **Contáctanos (`/contactanos` - `ContactUs.jsx`)**: Canales de atención oficial y formulario de contacto estructurado para clientes y proveedores.
-4. **Cómo Comprar (`/como-comprar` - `HowToBuy.jsx`)**: Guía paso a paso de compra, medios de pago habilitados y políticas de devolución.
-5. **Preguntas Frecuentes (`/preguntas-frecuentes` - `Faq.jsx`)**: Acordeón interactivo con respuestas a dudas habituales.
-
-### C. Menú de Navegación
-- **Navbar superior (`Navbar.jsx`)**: Barra superior con diseño responsivo, enlaces principales, enlace al carrito con indicador numérico dinámico de artículos acumulados y menú hamburguesa en dispositivos móviles.
-- **BottomNav inferior (`BottomNav.jsx`)**: Menú fijo inferior con iconos SVG optimizados para dispositivos móviles con acceso a Inicio, Artículos, Carrito (con badge reactivo), Ingreso y Sucursales.
-- **Footer institucional (`Footer.jsx`)**: Mapa de navegación completo dividido en columnas temáticas con enlaces informativos y legales.
-
-### D. Descomposición Modular (Single Responsibility & DRY)
-- `src/components/inventory/InventoryMetrics.jsx`: Tarjetas de indicadores clave (KPIs y valoración total).
-- `src/components/inventory/InventoryFilters.jsx`: Buscador general y selector de filtro por tipo de producto.
-- `src/components/inventory/ProductForm.jsx`: Formulario controlado reutilizable con validación de campos y SKU.
-- `src/components/inventory/ProductTable.jsx`: Tabla responsiva de inventario con alertas de existencias, acceso a ficha técnica y botón de agregado al carrito.
-
-### E. Framework CSS
-- **Tailwind CSS v4**: Integrado mediante `@tailwindcss/vite` para estilos utilitarios modernos, diseño responsivo móvil/escritorio y accesibilidad.
+### C. Despliegue en GitHub Pages (gh-pages)
+- Se configuro la propiedad `base: '/Supermercado_LeonardoBustamante_PFY2202/'` en `vite.config.js`.
+- Se incorporo `HashRouter` en `src/App.jsx` para garantizar que la navegacion entre rutas y la recarga de pagina no generen errores 404 en servidores estaticos como GitHub Pages.
+- Se integro la dependencia y scripts de publicacion automatica en `package.json` (`predeploy` y `deploy`).
 
 ---
 
-## 3. Estructura del Código Fuente
+## 2. Descripcion de Modulos y Funcionalidades
+
+### Modulo de Inventario y Catalogo:
+1. **Listado de Articulos (`InventoryTablePage.jsx` y `ProductTable.jsx`)**:
+   - Tabla con informacion completa: SKU, nombre, marca, categoria, ubicacion, precio formateado, stock numerico, estado de disponibilidad y acciones.
+   - Tarjetas KPI con metricas de resumen logistico.
+2. **Filtro Dinamico Inmutable (`InventoryFilters.jsx`)**:
+   - Selector por categoria y buscador por texto en tiempo real.
+   - Procesa los datos de forma inmutable mediante `useMemo`, preservando el inventario original.
+3. **Ficha Tecnica de Detalle (`ProductDetailPage.jsx`)**:
+   - Acceso individual a traves de `/articulos/:id`.
+   - Especificaciones completas, estado critico/agotado y selector interactivo con validacion de existencias maximas para agregar al carrito.
+4. **Ingreso de Nuevos Articulos (`AddProductPage.jsx` y `ProductForm.jsx`)**:
+   - Formulario controlado con validacion RegEx, control de SKU duplicado y persistencia inmediata.
+
+### Modulo de Carrito de Compras:
+1. **Pantalla de Carrito (`CartPage.jsx`)**:
+   - Listado de articulos reservados con calculo de subtotal, total e indicador de existencias remanentes en bodega.
+   - Controles `+` y `-` que actualizan en tiempo real el stock del inventario.
+   - Opciones para quitar productos, vaciar el carrito o completar la compra.
+
+### Modulo Institucional y de Atencion:
+1. **Quienes Somos (`AboutUs.jsx`)**: Mision, vision y valores corporativos.
+2. **Nuestras Tiendas (`OurStores.jsx`)**: Sucursales fisicas y horarios.
+3. **Contactanos (`ContactUs.jsx`)**: Formulario estructurado con validacion RegEx.
+4. **Como Comprar (`HowToBuy.jsx`)**: Guia de compra y metodos de pago.
+5. **Preguntas Frecuentes (`Faq.jsx`)**: Preguntas y respuestas habituales.
+
+---
+
+## 3. Estructura del Proyecto
 
 ```text
 SuperMercadoRequiem/
@@ -74,62 +83,68 @@ SuperMercadoRequiem/
 │   ├── assets/
 │   ├── components/
 │   │   ├── inventory/
-│   │   │   ├── InventoryFilters.jsx  # Subcomponente de búsqueda y filtrado
-│   │   │   ├── InventoryMetrics.jsx  # Subcomponente de tarjetas de resumen
-│   │   │   ├── ProductForm.jsx       # Subcomponente modular de formulario
-│   │   │   └── ProductTable.jsx      # Subcomponente modular de tabla con adición a carrito
-│   │   ├── BottomNav.jsx             # Menú de navegación inferior con badges e iconos SVG
-│   │   ├── Footer.jsx                # Pie de página institucional
-│   │   └── Navbar.jsx                # Barra superior responsiva con contador del carrito
+│   │   │   ├── InventoryFilters.jsx  # Subcomponente de busqueda y selector de categoria
+│   │   │   ├── InventoryMetrics.jsx  # Tarjetas de resumen logistico y KPIs
+│   │   │   ├── ProductForm.jsx       # Formulario con validacion RegEx para SKU y valores
+│   │   │   └── ProductTable.jsx      # Tabla interactiva con enlace a fichas tecnicas
+│   │   ├── BottomNav.jsx             # Menu inferior movil con iconos SVG e insignias reactivas
+│   │   ├── Footer.jsx                # Pie de pagina institucional
+│   │   └── Navbar.jsx                # Barra superior con menu hamburguesa y contador de carrito
 │   ├── context/
-│   │   ├── InventoryContext.jsx      # Provider global: productos, carrito, stock y persistencia
-│   │   └── inventoryContextDef.js    # Definición del contexto React
+│   │   ├── InventoryContext.jsx      # useReducer + Context API con sincronizacion atomica
+│   │   └── inventoryContextDef.js    # Definicion del contexto
 │   ├── data/
-│   │   └── initialProducts.js        # Datos semilla con marcas, categorías, SKU y UUID
+│   │   └── initialProducts.js        # Catalogo semilla inicial
 │   ├── hooks/
-│   │   └── useInventory.js           # Custom Hook para consumir inventario y carrito
+│   │   └── useInventory.js           # Custom hook de consumo desacoplado
 │   ├── pages/
-│   │   ├── AboutUs.jsx               # Quiénes Somos
-│   │   ├── AddProductPage.jsx        # Ingreso de nuevos artículos
-│   │   ├── CartPage.jsx              # Carrito de compras y sincronización bidireccional
-│   │   ├── ContactUs.jsx             # Contáctanos
-│   │   ├── Faq.jsx                   # Preguntas Frecuentes
+│   │   ├── AboutUs.jsx               # Quienes Somos
+│   │   ├── AddProductPage.jsx        # Pantalla de registro de producto
+│   │   ├── CartPage.jsx              # Pantalla de carrito con sincronizacion de stock
+│   │   ├── ContactUs.jsx             # Pantalla de contacto con validaciones RegEx
+│   │   ├── Faq.jsx                   # Preguntas frecuentes
 │   │   ├── HomeInventory.jsx         # Dashboard principal
-│   │   ├── HowToBuy.jsx              # Cómo Comprar
-│   │   ├── InventoryTablePage.jsx    # Catálogo de artículos con filtro dinámico inmutable
-│   │   ├── NotFound.jsx              # Manejador de rutas 404
+│   │   ├── HowToBuy.jsx              # Como Comprar
+│   │   ├── InventoryTablePage.jsx    # Catalogo con filtro dinamico inmutable
+│   │   ├── NotFound.jsx              # Manejador de ruta 404
 │   │   ├── OurStores.jsx             # Nuestras Tiendas
-│   │   └── ProductDetailPage.jsx     # Ficha técnica detallada del artículo
-│   ├── App.css                       # Reglas complementarias de estilo
-│   ├── App.jsx                       # Configuración de rutas (/articulos/:id, /carrito, etc.)
-│   ├── index.css                     # Importación de Tailwind CSS y tema
-│   └── main.jsx                      # Punto de entrada de la aplicación
+│   │   └── ProductDetailPage.jsx     # Ficha tecnica detallada de articulo
+│   ├── App.css
+│   ├── App.jsx                       # Configuracion de HashRouter y vistas
+│   ├── index.css                     # Directivas de Tailwind CSS v4
+│   └── main.jsx                      # Punto de entrada
 ├── index.html
-├── package.json
-├── vite.config.js
-└── README.md
+├── package.json                      # Scripts de desarrollo, construccion y despliegue gh-pages
+├── vite.config.js                    # Configuracion de Vite con plugin Tailwind y base de despliegue
+└── README.md                         # Documentacion tecnica del proyecto
 ```
 
 ---
 
-## 4. Instrucciones de Ejecución Local
+## 4. Instrucciones de Ejecucion y Despliegue
 
-1. Instalar las dependencias del proyecto:
-   ```bash
-   npm install
-   ```
+### 1. Instalacion de dependencias
+```bash
+npm install
+```
 
-2. Ejecutar el servidor de desarrollo:
-   ```bash
-   npm run dev
-   ```
+### 2. Ejecutar entorno de desarrollo local
+```bash
+npm run dev
+```
 
-3. Compilar el proyecto para producción:
-   ```bash
-   npm run build
-   ```
+### 3. Verificar calidad de codigo con linter
+```bash
+npm run lint
+```
 
-4. Ejecutar el linter para comprobar calidad de código:
-   ```bash
-   npm run lint
-   ```
+### 4. Compilar proyecto para produccion
+```bash
+npm run build
+```
+
+### 5. Desplegar en GitHub Pages
+```bash
+npm run deploy
+```
+El comando `npm run deploy` ejecutara previamente la compilacion (`predeploy`) y publicara automaticamente la carpeta `dist` en la rama `gh-pages` de su repositorio remoto.

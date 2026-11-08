@@ -33,11 +33,22 @@ export default function ProductForm({ onSuccess, onCancel, title = "Registrar Nu
     }
   };
 
+  /**
+   * Expresiones regulares para control estricto de entrada y formato de datos:
+   * - SKU: 3 letras mayusculas, un guion y 3 a 4 digitos numericos (ej: LAC-010, ALM-001).
+   * - Numeros enteros positivos para stock y precio en moneda local.
+   */
+  const SKU_REGEX = /^[A-Z]{3}-\d{3,4}$/;
+  const INTEGER_REGEX = /^\d+$/;
+
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.sku.trim()) {
+    const normalizedSku = formData.sku.trim().toUpperCase();
+    if (!normalizedSku) {
       newErrors.sku = "El codigo SKU es obligatorio.";
+    } else if (!SKU_REGEX.test(normalizedSku)) {
+      newErrors.sku = "El SKU debe tener el formato estandar de 3 letras, guion y 3 o 4 digitos (ej: LAC-010 o BEB-004).";
     }
 
     if (!formData.name.trim()) {
@@ -48,14 +59,18 @@ export default function ProductForm({ onSuccess, onCancel, title = "Registrar Nu
       newErrors.brand = "La marca del articulo es obligatoria.";
     }
 
-    const stockNum = parseInt(formData.stock, 10);
-    if (isNaN(stockNum) || stockNum < 0) {
-      newErrors.stock = "El stock debe ser un numero mayor o igual a 0.";
+    const stockStr = formData.stock.toString().trim();
+    if (!stockStr) {
+      newErrors.stock = "El stock inicial es obligatorio.";
+    } else if (!INTEGER_REGEX.test(stockStr)) {
+      newErrors.stock = "El stock debe ser un numero entero mayor o igual a 0.";
     }
 
-    const priceNum = parseFloat(formData.price);
-    if (isNaN(priceNum) || priceNum < 0) {
-      newErrors.price = "El precio debe ser un numero mayor o igual a 0.";
+    const priceStr = formData.price.toString().trim();
+    if (!priceStr) {
+      newErrors.price = "El precio unitario es obligatorio.";
+    } else if (!INTEGER_REGEX.test(priceStr)) {
+      newErrors.price = "El precio debe ser un numero entero mayor o igual a 0.";
     }
 
     setErrors(newErrors);
@@ -71,8 +86,8 @@ export default function ProductForm({ onSuccess, onCancel, title = "Registrar Nu
     }
 
     const result = addProduct({
-      sku: formData.sku,
-      name: formData.name,
+      sku: formData.sku.trim().toUpperCase(),
+      name: formData.name.trim(),
       brand: formData.brand,
       category: formData.category,
       stock: parseInt(formData.stock, 10),

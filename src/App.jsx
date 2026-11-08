@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { InventoryProvider } from "./context/InventoryContext";
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
@@ -19,7 +19,8 @@ import "./App.css";
 function App() {
   return (
     <InventoryProvider>
-      <BrowserRouter>
+      {/* Se utiliza HashRouter para compatibilidad total con GitHub Pages evitando errores 404 en recarga */}
+      <HashRouter>
         <div className="app-shell">
           {/* Barra superior de identificacion */}
           <Navbar />
@@ -52,7 +53,7 @@ function App() {
           {/* Menu inferior para navegacion fluida entre paginas */}
           <BottomNav />
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </InventoryProvider>
   );
 }

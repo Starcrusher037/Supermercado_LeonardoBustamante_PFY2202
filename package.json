@@ -2,10 +2,13 @@
   "name": "supermercadorequiem",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://starcrusher037.github.io/Supermercado_LeonardoBustamante_PFY2202",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -24,6 +27,7 @@
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "gh-pages": "^6.3.0",
     "globals": "^17.13.0",
     "vite": "^8.3.4"
   }

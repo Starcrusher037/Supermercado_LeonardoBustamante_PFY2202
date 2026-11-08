@@ -11,7 +11,18 @@ export default function ContactUs() {
     message: ""
   });
 
+  const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+
+  /**
+   * Expresiones regulares para control de formato de entrada:
+   * - EMAIL_REGEX: Valida formato estandar de direccion de correo (usuario@dominio.extension).
+   * - PHONE_REGEX: Valida numeros de telefono chilenos validos (+56 9 XXXX XXXX o 9XXXXXXXX).
+   * - NAME_REGEX: Valida nombres con al menos 3 caracteres alfabeticos (incluyendo tildes y enes).
+   */
+  const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const PHONE_REGEX = /^(\+?56)?(\s?)(9\s?\d{4}\s?\d{4}|\d{2}\s?\d{4}\s?\d{4})$/;
+  const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{3,}$/;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -19,10 +30,55 @@ export default function ContactUs() {
       ...prev,
       [name]: value
     }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    const cleanName = formData.fullName.trim();
+    if (!cleanName) {
+      newErrors.fullName = "El nombre completo es obligatorio.";
+    } else if (!NAME_REGEX.test(cleanName)) {
+      newErrors.fullName = "El nombre debe contener al menos 3 caracteres alfabeticos validos.";
+    }
+
+    const cleanEmail = formData.email.trim();
+    if (!cleanEmail) {
+      newErrors.email = "El correo electronico es obligatorio.";
+    } else if (!EMAIL_REGEX.test(cleanEmail)) {
+      newErrors.email = "Ingrese un formato de correo electronico valido (ej: usuario@dominio.cl).";
+    }
+
+    const cleanPhone = formData.phone.trim();
+    if (cleanPhone && !PHONE_REGEX.test(cleanPhone)) {
+      newErrors.phone = "El telefono no tiene un formato chileno valido (ej: +56 9 1234 5678).";
+    }
+
+    const cleanMessage = formData.message.trim();
+    if (!cleanMessage) {
+      newErrors.message = "El mensaje o consulta es obligatorio.";
+    } else if (cleanMessage.length < 10) {
+      newErrors.message = "El mensaje debe contener al menos 10 caracteres.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
@@ -34,6 +90,7 @@ export default function ContactUs() {
         store: "Sucursal Central Santiago",
         message: ""
       });
+      setErrors({});
     }, 4000);
   };
 
@@ -121,7 +178,7 @@ export default function ContactUs() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">
@@ -131,12 +188,13 @@ export default function ContactUs() {
                     type="text"
                     id="fullName"
                     name="fullName"
-                    className="form-input"
+                    className={`form-input ${errors.fullName ? "border-red-500 focus:border-red-500" : ""}`}
                     placeholder="Ej: Juan Perez Gonzalez"
                     value={formData.fullName}
                     onChange={handleChange}
                     required
                   />
+                  {errors.fullName && <p className="text-red-600 text-xs mt-1">{errors.fullName}</p>}
                 </div>
 
                 <div>
@@ -147,12 +205,13 @@ export default function ContactUs() {
                     type="email"
                     id="email"
                     name="email"
-                    className="form-input"
+                    className={`form-input ${errors.email ? "border-red-500 focus:border-red-500" : ""}`}
                     placeholder="juan.perez@correo.cl"
                     value={formData.email}
                     onChange={handleChange}
                     required
                   />
+                  {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -163,11 +222,12 @@ export default function ContactUs() {
                     type="tel"
                     id="phone"
                     name="phone"
-                    className="form-input"
+                    className={`form-input ${errors.phone ? "border-red-500 focus:border-red-500" : ""}`}
                     placeholder="+56 9 1234 5678"
                     value={formData.phone}
                     onChange={handleChange}
                   />
+                  {errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
                 </div>
 
                 <div>
@@ -215,12 +275,13 @@ export default function ContactUs() {
                     id="message"
                     name="message"
                     rows="4"
-                    className="form-input"
+                    className={`form-input ${errors.message ? "border-red-500 focus:border-red-500" : ""}`}
                     placeholder="Escriba aqui su mensaje detallado..."
                     value={formData.message}
                     onChange={handleChange}
                     required
                   ></textarea>
+                  {errors.message && <p className="text-red-600 text-xs mt-1">{errors.message}</p>}
                 </div>
 
                 <div className="md:col-span-2 flex justify-end">
